@@ -14,8 +14,7 @@ app.use(cors({
     credentials: true,
 }));
 
-// Handle preflight OPTIONS requests explicitly if needed
-app.options('*', cors());
+// CORS handles preflight automatically through use() middleware above
 
 // Webhook must be parsed as raw body before express.json
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeRoutes);
