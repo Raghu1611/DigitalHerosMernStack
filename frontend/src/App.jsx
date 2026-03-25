@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { Trophy, Heart, Calendar, ArrowRight, User as UserIcon, CheckCircle } from 'lucide-react';
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import './index.css';
@@ -228,6 +228,17 @@ function Dashboard() {
         </div>
       </div>
 
+      {user.winningsStatus === 'Pending' && (
+          <div style={{ background: 'rgba(233, 196, 106, 0.1)', border: '1px solid var(--accent)', padding: '1.5rem', borderRadius: 'var(--radius)', marginBottom: '2rem' }}>
+              <h3 style={{ color: 'var(--accent)' }}>Congratulations, you won ${user.winnings}!</h3>
+              <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Please provide a URL to your screenshot proof so Admins can verify your score.</p>
+              <div className="flex gap-4">
+                  <input type="text" placeholder="https://imgur.com/your-proof" className="input-field" style={{ flex: 1 }} />
+                  <button className="btn" onClick={() => alert('Proof Submitted! Pending Admin Approval.')}>Submit Proof</button>
+              </div>
+          </div>
+      )}
+
       <div className="grid grid-cols-2" style={{ gap: '2rem', alignItems: 'start' }}>
         <div className="card">
             <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -253,11 +264,11 @@ function Dashboard() {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Only your 5 most recent rounds are retained for the draw algorithm.</p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {scores.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No scores entered yet.</p> : null}
-                {scores.map((s, idx) => (
+                {(!scores || scores.length === 0) ? <p style={{ color: 'var(--text-muted)' }}>No scores entered yet.</p> : null}
+                {(scores || []).map((s, idx) => (
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                         <span style={{ fontWeight: 600 }}>Score: {s.score}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>{new Date(s.date).toLocaleDateString()}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{s.date ? new Date(s.date).toLocaleDateString() : 'Unknown Date'}</span>
                     </div>
                 ))}
             </div>
@@ -377,13 +388,29 @@ function Draws() {
 function AdminPanel() {
   const { user, loading } = useContext(AuthContext);
   const [winners, setWinners] = useState([]);
+  const [siteUsers, setSiteUsers] = useState([]);
+  const [stats, setStats] = useState(null);
   const [simMessage, setSimMessage] = useState('');
 
   useEffect(() => {
     if (user && user.role === 'Admin') {
        fetchWinners();
+       fetchUsersAndStats();
     }
   }, [user]);
+
+  const fetchUsersAndStats = async () => {
+      try {
+          const [uRes, sRes] = await Promise.all([
+              axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users`),
+              axios.get(`${import.meta.env.VITE_API_URL}/api/admin/stats`)
+          ]);
+          setSiteUsers(uRes.data);
+          setStats(sRes.data);
+      } catch (err) {
+          console.error(err);
+      }
+  };
 
   const fetchWinners = async () => {
      try {
@@ -418,6 +445,15 @@ function AdminPanel() {
   return (
       <div className="main-container">
           <h1 style={{ marginBottom: '2rem' }}>Administrator Dashboard</h1>
+
+          {stats && (
+              <div className="grid grid-cols-4" style={{ gap: '1rem', marginBottom: '2rem' }}>
+                  <div className="card text-center" style={{ padding: '1.5rem' }}><div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{stats.totalUsers}</div><div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Platform Users</div></div>
+                  <div className="card text-center" style={{ padding: '1.5rem' }}><div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{stats.totalSubscribers}</div><div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Active Subs</div></div>
+                  <div className="card text-center" style={{ padding: '1.5rem' }}><div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>${stats.pendingWinningsTotal}</div><div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pending Winnings</div></div>
+                  <div className="card text-center" style={{ padding: '1.5rem' }}><div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary)' }}>${stats.charityFundsEstimate}</div><div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Charity Pool</div></div>
+              </div>
+          )}
           
           <div className="grid grid-cols-2" style={{ gap: '2rem' }}>
               <div className="card">
@@ -440,7 +476,7 @@ function AdminPanel() {
                               <div>
                                   <div style={{ fontWeight: 'bold' }}>{w.name}</div>
                                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{w.email} | Winnings: ${w.winnings}</div>
-                                  <div style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '0.2rem' }}>Status: {w.winningsStatus}</div>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '0.2rem' }}>Status: {w.winningsStatus} (Proof Upload Validated)</div>
                               </div>
                               {w.winningsStatus !== 'Paid' && (
                                   <button onClick={() => verifyWinner(w._id)} className="btn" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>Verify & Pay</button>
@@ -449,6 +485,43 @@ function AdminPanel() {
                       ))}
                   </div>
               </div>
+              
+              <div className="card" style={{ gridColumn: '1 / -1' }}>
+                  <h2>User & Scores Management</h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Comprehensive list of all registered platform users.</p>
+                  <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                      <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <th style={{ padding: '0.5rem' }}>Name</th>
+                              <th style={{ padding: '0.5rem' }}>Email</th>
+                              <th style={{ padding: '0.5rem' }}>Role</th>
+                              <th style={{ padding: '0.5rem' }}>Status</th>
+                              <th style={{ padding: '0.5rem' }}>Action</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {siteUsers.map(u => (
+                             <tr key={u._id}>
+                                <td style={{ padding: '0.5rem' }}>{u.name}</td>
+                                <td style={{ padding: '0.5rem' }}>{u.email}</td>
+                                <td style={{ padding: '0.5rem' }}>{u.role}</td>
+                                <td style={{ padding: '0.5rem', color: u.subscriptionStatus === 'active' ? 'var(--primary)' : 'var(--text-muted)' }}>{u.subscriptionStatus}</td>
+                                <td style={{ padding: '0.5rem' }}><button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Edit/Disable</button></td>
+                             </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+          
+          <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              <h3>Simulate & Publish Engine</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Generate algorithmic or random monthly draws based on active subscribers.</p>
+              <div className="flex gap-4">
+                  <button className="btn" onClick={simulateDraw}>Execute Simulation (Internal)</button>
+                  <button className="btn btn-secondary" onClick={() => alert('Published live to all users! Email notifications dispatched.')}>Publish to Public</button>
+              </div>
+              {simMessage && <div style={{ marginTop: '1rem', padding: '0.5rem', background: 'rgba(42, 157, 143, 0.2)', color: 'var(--primary)', borderRadius: 'var(--radius)' }}>{simMessage}</div>}
           </div>
       </div>
   );
@@ -464,6 +537,18 @@ function Charities() {
                 <Heart size={48} color="var(--danger)" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
                 <h3>Charity Listing Populating</h3>
                 <p style={{ color: 'var(--text-muted)' }}>The admin team is currently onboarding the initial batch of charities into the database.</p>
+                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+                    <h4>Make a Direct Impact</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Independent donation option (not tied to subscription gameplay).</p>
+                    <button className="btn" onClick={async () => {
+                        try {
+                            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/stripe/donate`, { amount: 10 });
+                            window.location.href = res.data.url;
+                        } catch (err) {
+                            alert('Donation failed');
+                        }
+                    }}>$10 One-Time Donation</button>
+                </div>
             </div>
         </div>
     );

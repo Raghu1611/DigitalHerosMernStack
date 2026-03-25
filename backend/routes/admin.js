@@ -84,4 +84,37 @@ router.get('/charities', async (req, res) => {
     }
 });
 
+// Get all users
+router.get('/users', adminAuthMiddleware, async (req, res) => {
+    try {
+        const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+        res.json(users);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// Get admin stats dashboard
+router.get('/stats', adminAuthMiddleware, async (req, res) => {
+    try {
+        const [userCount, subCount, pendingPayouts] = await Promise.all([
+            User.countDocuments(),
+            User.countDocuments({ subscriptionStatus: 'active' }),
+            User.aggregate([
+                { $match: { winningsStatus: 'Pending' } },
+                { $group: { _id: null, total: { $sum: '$winnings' } } }
+            ])
+        ]);
+
+        res.json({
+            totalUsers: userCount,
+            totalSubscribers: subCount,
+            pendingWinningsTotal: pendingPayouts[0]?.total || 0,
+            charityFundsEstimate: (subCount * 19 * 0.10) // Mock 10% of monthly $19 sub
+        });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
