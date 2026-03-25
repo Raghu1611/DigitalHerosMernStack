@@ -7,7 +7,15 @@ const authRoutes = require('./routes/auth');
 const stripeRoutes = require('./routes/stripe');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: '*', // Allow all for public Vercel availability
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    credentials: true,
+}));
+
+// Handle preflight OPTIONS requests explicitly if needed
+app.options('*', cors());
 
 // Webhook must be parsed as raw body before express.json
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeRoutes);
