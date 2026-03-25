@@ -3,7 +3,11 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const User = require('./models/User');
 
-const MONGO_URI = 'mongodb+srv://2200032009cseh_db_user:2200032009cseh_db_user@cluster0.1lngg80.mongodb.net/golf-charity?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+    console.error('MONGO_URI is not defined in .env');
+    process.exit(1);
+}
 
 async function seed() {
     try {
