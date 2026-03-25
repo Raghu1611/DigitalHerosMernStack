@@ -34,22 +34,23 @@ app.use('/api/user', userRoutes);
 app.use('/api/draw', drawRoutes);
 app.use('/api/admin', adminRoutes);
 
+const MONGO_URI = process.env.MONGO_URI;
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((error) => console.error('MongoDB connection error:', error));
+
 app.get('/', (req, res) => {
     res.send('Golf Charity Subscription Platform API Remote');
 });
 
-const PORT = process.env.PORT;
-const MONGO_URI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 5000;
 
-if (!PORT || !MONGO_URI) throw new Error('Backend ENV variables missing');
+// Export mapping for Vercel serverless functions
+module.exports = app;
 
-mongoose.connect(MONGO_URI)
-    .then(() => {
-        console.log('Connected to MongoDB');
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    })
-    .catch((error) => {
-        console.error('MongoDB connection error:', error);
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
     });
+}
