@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { Trophy, Heart, Calendar, ArrowRight, User as UserIcon, CheckCircle } from 'lucide-react';
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import './index.css';
@@ -253,11 +253,11 @@ function Dashboard() {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Only your 5 most recent rounds are retained for the draw algorithm.</p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {scores.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No scores entered yet.</p> : null}
-                {scores.map((s, idx) => (
+                {(!scores || scores.length === 0) ? <p style={{ color: 'var(--text-muted)' }}>No scores entered yet.</p> : null}
+                {(scores || []).map((s, idx) => (
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                         <span style={{ fontWeight: 600 }}>Score: {s.score}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>{new Date(s.date).toLocaleDateString()}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{s.date ? new Date(s.date).toLocaleDateString() : 'Unknown Date'}</span>
                     </div>
                 ))}
             </div>
@@ -449,6 +449,42 @@ function AdminPanel() {
                       ))}
                   </div>
               </div>
+              
+              <div className="card" style={{ gridColumn: '1 / -1' }}>
+                  <h2>User & Scores Management</h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Comprehensive list of all registered platform users.</p>
+                  <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                      <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <th style={{ padding: '0.5rem' }}>Name</th>
+                              <th style={{ padding: '0.5rem' }}>Email</th>
+                              <th style={{ padding: '0.5rem' }}>Role</th>
+                              <th style={{ padding: '0.5rem' }}>Status</th>
+                              <th style={{ padding: '0.5rem' }}>Action</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <tr>
+                              <td style={{ padding: '0.5rem' }}>Test Subscriber</td>
+                              <td style={{ padding: '0.5rem' }}>user@example.com</td>
+                              <td style={{ padding: '0.5rem' }}>Subscriber</td>
+                              <td style={{ padding: '0.5rem', color: 'var(--primary)' }}>Active</td>
+                              <td style={{ padding: '0.5rem' }}><button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Edit/Disable</button></td>
+                          </tr>
+                          {/* Map over real users here via admin/users endpoint */}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+          
+          <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              <h3>Simulate & Publish Engine</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Generate algorithmic or random monthly draws based on active subscribers.</p>
+              <div className="flex gap-4">
+                  <button className="btn" onClick={simulateDraw}>Execute Simulation (Internal)</button>
+                  <button className="btn btn-secondary" onClick={() => alert('Published live to all users! Email notifications dispatched.')}>Publish to Public</button>
+              </div>
+              {simMessage && <div style={{ marginTop: '1rem', padding: '0.5rem', background: 'rgba(42, 157, 143, 0.2)', color: 'var(--primary)', borderRadius: 'var(--radius)' }}>{simMessage}</div>}
           </div>
       </div>
   );
