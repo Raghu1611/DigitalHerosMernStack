@@ -56,6 +56,33 @@ router.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+// Independent Charity Donation
+router.post('/donate', async (req, res) => {
+    try {
+        const { amount } = req.body;
+        if (!amount || amount < 5) return res.status(400).json({ message: 'Minimum donation is $5' });
+
+        const session = await stripe.checkout.sessions.create({
+             payment_method_types: ['card'],
+             line_items: [{
+                 price_data: {
+                     currency: 'usd',
+                     product_data: { name: 'Independent Charity Donation' },
+                     unit_amount: amount * 100, // cents
+                 },
+                 quantity: 1,
+             }],
+             mode: 'payment',
+             success_url: `${FRONTEND_URL}/charities?donation=success`,
+             cancel_url: `${FRONTEND_URL}/charities?donation=canceled`,
+        });
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Donation error:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
 // Stripe Webhook Endpoint (Must use raw body)
 // We need to parse raw body in index.js for this specific route
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
